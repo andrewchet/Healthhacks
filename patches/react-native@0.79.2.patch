@@ -1,0 +1,178 @@
+diff --git a/Libraries/LogBox/Data/LogBoxData.js b/Libraries/LogBox/Data/LogBoxData.jsAdd commentMore actions
+index 1c11fd4e0b46f5485fcc22cd1274fbbdec01ac19..2fb02a7f642d0789203accaec85e88930619a3ce 100644
+--- a/Libraries/LogBox/Data/LogBoxData.js
++++ b/Libraries/LogBox/Data/LogBoxData.js
+@@ -188,9 +188,10 @@ function appendNewLog(newLog: LogBoxLog) {
+         handleUpdate();
+       }
+     });
+-  } else if (newLog.level === 'syntax') {
+-    logs.add(newLog);
+-    setSelectedLog(logs.size - 1);
++  // Make syntax errors dismissible  
++  // } else if (newLog.level === 'syntax') {
++  //   logs.add(newLog);
++  //   setSelectedLog(logs.size - 1);
+   } else {
+     logs.add(newLog);
+     handleUpdate();
+diff --git a/Libraries/LogBox/UI/LogBoxInspector.js b/Libraries/LogBox/UI/LogBoxInspector.js
+index be889b06fd58e8a93f7e512e2874b2234c728c4f..3b93f5dcaeac90f6d5813b3258332e3cf66ef639 100644
+--- a/Libraries/LogBox/UI/LogBoxInspector.js
++++ b/Libraries/LogBox/UI/LogBoxInspector.js
+@@ -76,6 +76,8 @@ export default function LogBoxInspector(props: Props): React.Node {
+         onDismiss={props.onDismiss}
+         onMinimize={props.onMinimize}
+         level={log.level}
++        log={log}
++        logs={logs}
+       />
+     </View>
+   );
+diff --git a/Libraries/LogBox/UI/LogBoxInspectorFooter.js b/Libraries/LogBox/UI/LogBoxInspectorFooter.js
+index c3a7b692106d9233d508d7dabfc082f091b2d257..37d192543e1b2035cb714b03e1b808ac21f0adcd 100644
+--- a/Libraries/LogBox/UI/LogBoxInspectorFooter.js
++++ b/Libraries/LogBox/UI/LogBoxInspectorFooter.js
+@@ -8,7 +8,7 @@
+  * @format
+  */
+ 
+-import type {LogLevel} from '../Data/LogBoxLog';
++import LogBoxLog, { type LogLevel } from '../Data/LogBoxLog';
+ 
+ import View from '../../Components/View/View';
+ import StyleSheet from '../../StyleSheet/StyleSheet';
+@@ -16,28 +16,54 @@ import Text from '../../Text/Text';
+ import LogBoxInspectorFooterButton from './LogBoxInspectorFooterButton';
+ import * as LogBoxStyle from './LogBoxStyle';
+ import * as React from 'react';
++import Clipboard from '@react-native-clipboard/clipboard';
+ 
+ type Props = $ReadOnly<{
+   onDismiss: () => void,
+   onMinimize: () => void,
+   level?: ?LogLevel,
++  log?: LogBoxLog,
++  logs?: $ReadOnlyArray<LogBoxLog>,
+ }>;
+ 
+ export default function LogBoxInspectorFooter(props: Props): React.Node {
+-  if (props.level === 'syntax') {
+-    return (
+-      <View style={styles.root}>
+-        <View style={styles.button}>
+-          <Text id="logbox_dismissable_text" style={styles.syntaxErrorText}>
+-            This error cannot be dismissed.
+-          </Text>
+-        </View>
+-      </View>
+-    );
++  // if (props.level === 'syntax') {
++  //   return (
++  //     <View style={styles.root}>
++  //       <View style={styles.button}>
++  //         <Text id="logbox_dismissable_text" style={styles.syntaxErrorText}>
++  //           This error cannot be dismissed.
++  //         </Text>
++  //       </View>
++  //     </View>
++  //   );
++  // }
++
++  const getCopyText = (log: LogBoxLog) => {
++    const message = log.message.content;
++    const filePath = log.codeFrame?.fileName;
++    const codeContent = log.codeFrame?.content;
++    const copyText = `${message}\n\n${filePath}\n\n${codeContent}`.replaceAll(/\u001b\[[0-9;]*m/g, '');
++    return copyText;
++  }
++
++  const copyToClipboard = () => {
++    if (props.log) {
++      Clipboard.setString(getCopyText(props.log));
++    }
++  }
++
++  const copyAllToClipboard = () => {
++    if (props.logs) {
++      const copyText = props.logs.map(log => getCopyText(log)).join('\n');
++      Clipboard.setString(copyText);
++    }
+   }
+ 
+   return (
+     <View style={styles.root}>
++      <LogBoxInspectorFooterButton text="Copy" onPress={copyToClipboard} />
++      <LogBoxInspectorFooterButton text="Copy All" onPress={copyAllToClipboard} />
+       <LogBoxInspectorFooterButton
+         id="logbox_footer_button_dismiss"
+         text="Dismiss"
+diff --git a/React/Base/RCTDefines.h b/React/Base/RCTDefines.h
+index 228d92c2960a78ff209b8856884b179baed320c8..f87902b18c7eaa8169977f840d0c9c570b88755d 100644
+--- a/React/Base/RCTDefines.h
++++ b/React/Base/RCTDefines.h
+@@ -92,7 +92,7 @@
+  * By default though, it will inherit from RCT_DEV.
+  */
+ #ifndef RCT_DEV_MENU
+-#define RCT_DEV_MENU RCT_DEV
++#define RCT_DEV_MENU 1 //RCT_DEV
+ #endif
+ 
+ #ifndef RCT_DEV_SETTINGS_ENABLE_PACKAGER_CONNECTION
+diff --git a/React/Base/RCTAssert.m b/React/Base/RCTAssert.m
+index ca8542eb6acf2feebb70a9da47ece608d7bde773..63f844b7c9977b90b39a6fc136502d467a69bec7 100644
+--- a/React/Base/RCTAssert.m
++++ b/React/Base/RCTAssert.m
+@@ -127,9 +127,9 @@ void RCTFatal(NSError *error)
+   if (fatalHandler) {
+     fatalHandler(error);
+   } else {
+-#if DEBUG
++// #if DEBUG
+     @try {
+-#endif
++// #endif
+       NSString *name = [NSString stringWithFormat:@"%@: %@", RCTFatalExceptionName, error.localizedDescription];
+ 
+       // Truncate the localized description to 175 characters to avoid wild screen overflows
+@@ -145,10 +145,10 @@ void RCTFatal(NSError *error)
+       // reason: <underlying error description plus JS stack trace, truncated to 175 characters>
+       // userInfo: <underlying error userinfo, plus untruncated description plus JS stack trace>
+       @throw [[NSException alloc] initWithName:name reason:message userInfo:userInfo];
+-#if DEBUG
++// #if DEBUG
+     } @catch (NSException *e) {
+     }
+-#endif
++// #endif
+   }
+ }
+ 
+diff --git a/React/Base/RCTRedBoxSetEnabled.m b/React/Base/RCTRedBoxSetEnabled.m
+index 51142be37507b2df40c103cc155bb75ef7e73410..7a077df9fb75227202d34ea468614f582324359f 100644
+--- a/React/Base/RCTRedBoxSetEnabled.m
++++ b/React/Base/RCTRedBoxSetEnabled.m
+@@ -10,7 +10,7 @@
+ #if RCT_DEV
+ static BOOL redBoxEnabled = YES;
+ #else
+-static BOOL redBoxEnabled = NO;
++static BOOL redBoxEnabled = YES; // NO;
+ #endif
+ 
+ void RCTRedBoxSetEnabled(BOOL enabled)
+diff --git a/React/CoreModules/RCTRedBox.mm b/React/CoreModules/RCTRedBox.mm
+index fb057b969214ee3d4d691a8530a49c4a8f727c34..626cadd5557872a1125992d3f0e6e8fe9132719c 100644
+--- a/React/CoreModules/RCTRedBox.mm
++++ b/React/CoreModules/RCTRedBox.mm
+@@ -656,7 +656,8 @@ - (void)loadExtraDataViewController
+ 
+ - (void)invalidate
+ {
+-  [self dismiss];
++  // workaround for https://github.com/facebook/react-native/pull/50867
++  // [self dismiss];
+ }
+ 
+ - (void)redBoxController:(__unused RCTRedBoxController *)redBoxController
