@@ -11,6 +11,11 @@ export default function WelcomeScreen() {
   const navigation = useNavigation<any>();
   const { completeOnboarding, isDarkMode } = useAppStore();
 
+  // Debug logging
+  console.log("[WelcomeScreen] Rendering WelcomeScreen");
+  console.log("[WelcomeScreen] isDarkMode:", isDarkMode);
+  console.log("[WelcomeScreen] insets:", insets);
+
   const handleGetStarted = () => {
     completeOnboarding();
     navigation.navigate('Login' as never);

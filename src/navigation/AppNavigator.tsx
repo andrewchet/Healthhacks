@@ -107,9 +107,17 @@ export default function AppNavigator() {
     return "MainTabs";
   };
 
+  const initialRoute = getInitialRouteName();
+  
+  // Debug logging
+  console.log("[AppNavigator] hasCompletedOnboarding:", hasCompletedOnboarding);
+  console.log("[AppNavigator] isAuthenticated:", isAuthenticated);
+  console.log("[AppNavigator] currentUser:", currentUser);
+  console.log("[AppNavigator] initialRoute:", initialRoute);
+
   return (
     <Stack.Navigator
-      initialRouteName={getInitialRouteName()}
+      initialRouteName={initialRoute}
       screenOptions={{
         headerStyle: {
           backgroundColor: isDarkMode ? '#1F2937' : '#FFFFFF',

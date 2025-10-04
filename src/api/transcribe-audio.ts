@@ -18,7 +18,7 @@ export const transcribeAudio = async (localAudioUri: string) => {
       type: "audio/m4a",
       name: "recording.m4a",
     } as any);
-    formData.append("model", "gpt-4o-transcribe");
+    formData.append("model", "whisper-1");
     formData.append("language", "en");
 
     const OPENAI_API_KEY = process.env.EXPO_PUBLIC_VIBECODE_OPENAI_API_KEY;

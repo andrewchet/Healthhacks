@@ -1,15 +1,62 @@
 /*
 IMPORTANT NOTICE: DO NOT REMOVE
 ./src/api/chat-service.ts
-If the user wants to use AI to generate text, answer questions, or analyze images you can use the functions defined in this file to communicate with the OpenAI, Anthropic, and Grok APIs.
+This app uses OpenAI as the primary AI service for all text generation, chat, and analysis.
+All AI functionality routes through OpenAI for consistency and reliability.
 */
 import { AIMessage, AIRequestOptions, AIResponse } from "../types/ai";
-import { getAnthropicClient } from "./anthropic";
 import { getOpenAIClient } from "./openai";
-import { getGrokClient } from "./grok";
 
 /**
- * Get a text response from Anthropic
+ * PRIMARY AI SERVICE - OpenAI Text Response
+ * This is the main function used throughout the app
+ * @param messages - The messages to send to the AI
+ * @param options - The options for the request
+ * @returns The response from the AI
+ */
+export const getOpenAITextResponse = async (messages: AIMessage[], options?: AIRequestOptions): Promise<AIResponse> => {
+  try {
+    const client = getOpenAIClient();
+    const defaultModel = "gpt-4o-2024-11-20"; // Most capable model for text and image analysis
+
+    const response = await client.chat.completions.create({
+      model: options?.model || defaultModel,
+      messages: messages,
+      temperature: options?.temperature ?? 0.7,
+      max_tokens: options?.maxTokens || 2048,
+    });
+
+    return {
+      content: response.choices[0]?.message?.content || "",
+      usage: {
+        promptTokens: response.usage?.prompt_tokens || 0,
+        completionTokens: response.usage?.completion_tokens || 0,
+        totalTokens: response.usage?.total_tokens || 0,
+      },
+    };
+  } catch (error) {
+    console.error("OpenAI API Error:", error);
+    throw error;
+  }
+};
+
+/**
+ * PRIMARY AI SERVICE - Simple Chat Response
+ * This is the main function used throughout the app for simple prompts
+ * @param prompt - The prompt to send to the AI
+ * @returns The response from the AI
+ */
+export const getOpenAIChatResponse = async (prompt: string): Promise<AIResponse> => {
+  return await getOpenAITextResponse([{ role: "user", content: prompt }]);
+};
+
+// =============================================================================
+// BACKUP SERVICES (NOT ACTIVELY USED)
+// These services are available but the app primarily uses OpenAI
+// =============================================================================
+
+/**
+ * Get a text response from Anthropic (BACKUP SERVICE - NOT ACTIVELY USED)
  * @param messages - The messages to send to the AI
  * @param options - The options for the request
  * @returns The response from the AI
@@ -55,7 +102,7 @@ export const getAnthropicTextResponse = async (
 };
 
 /**
- * Get a simple chat response from Anthropic
+ * Get a simple chat response from Anthropic (BACKUP SERVICE - NOT ACTIVELY USED)
  * @param prompt - The prompt to send to the AI
  * @returns The response from the AI
  */
@@ -64,48 +111,7 @@ export const getAnthropicChatResponse = async (prompt: string): Promise<AIRespon
 };
 
 /**
- * Get a text response from OpenAI
- * @param messages - The messages to send to the AI
- * @param options - The options for the request
- * @returns The response from the AI
- */
-export const getOpenAITextResponse = async (messages: AIMessage[], options?: AIRequestOptions): Promise<AIResponse> => {
-  try {
-    const client = getOpenAIClient();
-    const defaultModel = "gpt-4o-2024-11-20"; //accepts images as well, use this for image analysis
-
-    const response = await client.chat.completions.create({
-      model: options?.model || defaultModel,
-      messages: messages,
-      temperature: options?.temperature ?? 0.7,
-      max_tokens: options?.maxTokens || 2048,
-    });
-
-    return {
-      content: response.choices[0]?.message?.content || "",
-      usage: {
-        promptTokens: response.usage?.prompt_tokens || 0,
-        completionTokens: response.usage?.completion_tokens || 0,
-        totalTokens: response.usage?.total_tokens || 0,
-      },
-    };
-  } catch (error) {
-    console.error("OpenAI API Error:", error);
-    throw error;
-  }
-};
-
-/**
- * Get a simple chat response from OpenAI
- * @param prompt - The prompt to send to the AI
- * @returns The response from the AI
- */
-export const getOpenAIChatResponse = async (prompt: string): Promise<AIResponse> => {
-  return await getOpenAITextResponse([{ role: "user", content: prompt }]);
-};
-
-/**
- * Get a text response from Grok
+ * Get a text response from Grok (BACKUP SERVICE - NOT ACTIVELY USED)
  * @param messages - The messages to send to the AI
  * @param options - The options for the request
  * @returns The response from the AI
@@ -137,7 +143,7 @@ export const getGrokTextResponse = async (messages: AIMessage[], options?: AIReq
 };
 
 /**
- * Get a simple chat response from Grok
+ * Get a simple chat response from Grok (BACKUP SERVICE - NOT ACTIVELY USED)
  * @param prompt - The prompt to send to the AI
  * @returns The response from the AI
  */
